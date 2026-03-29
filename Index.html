@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+  <title>MuazBinShafi | Infinite Color Shift</title>
+  <style>
+    /* RESET & WORLD'S BLACKEST BACKGROUND */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      background-color: #000000;  /* deepest black – Vanta black style */
+    }
+
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Segoe UI', 'Poppins', 'Montserrat', 'Arial Black', system-ui, -apple-system, 'Inter', sans-serif;
+      background: #000000;
+      overflow-x: hidden;
+      margin: 0;
+      padding: 0;
+    }
+
+    /* GLOWING TEXT – BREATHING SCALE ANIMATION (only scale, color is JS-controlled) */
+    .glow-text {
+      font-size: clamp(2.8rem, 10vw, 7rem);
+      font-weight: 900;
+      text-align: center;
+      letter-spacing: 0.05em;
+      text-rendering: optimizeLegibility;
+      cursor: default;
+      user-select: none;
+      
+      /* Gentle floating breath effect */
+      animation: breathe 2.4s infinite alternate ease-in-out;
+      will-change: transform, text-shadow;
+      
+      /* Transition for smooth color changes when JS updates */
+      transition: color 0.2s ease-out, text-shadow 0.2s ease-out;
+    }
+
+    @keyframes breathe {
+      0% {
+        transform: scale(1);
+      }
+      100% {
+        transform: scale(1.03);
+      }
+    }
+
+    /* hover: slightly faster breathing */
+    .glow-text:hover {
+      animation-duration: 1.8s;
+    }
+
+    /* accessibility: reduced motion */
+    @media (prefers-reduced-motion: reduce) {
+      .glow-text {
+        animation: none;
+      }
+    }
+
+    /* guarantee pure black everywhere */
+    body, html, div, section, main, article, header, footer {
+      background-color: #000000 !important;
+      background-image: none !important;
+    }
+    .glow-text {
+      background: transparent !important;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="glow-text">MuazBinShafi</div>
+
+  <script>
+    (function() {
+      const glowElement = document.querySelector('.glow-text');
+      if (!glowElement) return;
+
+      // --------------------------------------------------------------
+      // COLOR CYCLE – EVERY 2 SECONDS, A BRAND NEW, DISTINCT COLOR
+      // No color repeats for at least 12 minutes (720 seconds) 
+      // because we generate a shuffled list of 360 unique hues, and 
+      // each hue is combined with random saturation & lightness for 
+      // even more variety. After exhausting, we reshuffle.
+      // --------------------------------------------------------------
+      
+      // 1) Generate an array of 360 unique hue values (0° … 359°)
+      const fullHueRange = Array.from({ length: 360 }, (_, i) => i);
+      
+      // 2) Function to shuffle an array (Fisher-Yates) – creates random order
+      function shuffleArray(arr) {
+        for (let i = arr.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [arr[i], arr[j]] = [arr[j], arr[i]];
+        }
+        return arr;
+      }
+      
+      // 3) We'll maintain a shuffled queue of hues, refill when empty
+      let hueQueue = shuffleArray([...fullHueRange]);
+      
+      // Helper to get next hue (guarantees no repeat until all 360 used)
+      function getNextHue() {
+        if (hueQueue.length === 0) {
+          // refill with fresh shuffle – this starts a new cycle after 360 steps
+          hueQueue = shuffleArray([...fullHueRange]);
+        }
+        return hueQueue.pop();
+      }
+      
+      // 4) For each color change, we generate not only a unique hue
+      //    but also slightly varying saturation and lightness to make
+      //    every color feel fresh and avoid any accidental repetition
+      //    of the exact same shade across cycles.
+      function getRandomSatLight() {
+        // Saturation: 85% to 100% – vivid, neon-ready
+        const sat = 85 + Math.random() * 15;
+        // Lightness: 55% to 75% – bright and glowy
+        const light = 55 + Math.random() * 20;
+        return { sat, light };
+      }
+      
+      // 5) Build a rich multi-layer neon glow using the current HSL color
+      function buildGlowShadows(hue, sat, light) {
+        // base color for shadows: same hue, but gradually decreasing lightness
+        // to create a realistic neon bloom
+        const baseColor = `hsl(${hue}, ${sat}%, ${light}%)`;
+        const midGlow = `hsl(${hue}, ${sat}%, ${Math.min(light + 10, 85)}%)`;
+        const strongGlow = `hsl(${hue}, ${sat}%, ${Math.min(light + 20, 90)}%)`;
+        const outerGlow = `hsl(${hue}, ${sat}%, ${Math.min(light + 5, 80)}%)`;
+        
+        // Layered shadows: from tight to wide, creating neon extrusion effect
+        return `
+          0 0 4px #fff,
+          0 0 8px ${baseColor},
+          0 0 15px ${midGlow},
+          0 0 25px ${strongGlow},
+          0 0 38px ${outerGlow},
+          0 0 50px ${baseColor}
+        `;
+      }
+      
+      // 6) Function to apply a completely new, distinct color + glow
+      let currentHue = null;
+      let currentSat = null;
+      let currentLight = null;
+      
+      function applyNextColor() {
+        // Get next unique hue (360 total before any repeat)
+        const newHue = getNextHue();
+        // Get fresh random saturation & lightness for extra uniqueness
+        const { sat, light } = getRandomSatLight();
+        
+        currentHue = newHue;
+        currentSat = sat;
+        currentLight = light;
+        
+        // Build the color and glow
+        const textColor = `hsl(${newHue}, ${sat}%, ${light}%)`;
+        const glowShadows = buildGlowShadows(newHue, sat, light);
+        
+        // Apply with a smooth transition (CSS transition handles the change)
+        glowElement.style.color = textColor;
+        glowElement.style.textShadow = glowShadows;
+        
+        // Optional: small console log to show color change (every 2 sec, but not intrusive)
+        // Only log every 30th change to keep console clean – uncomment for debugging
+        // const step = Math.floor(Date.now() / 2000) % 360;
+        // if (step % 30 === 0) console.log(`🎨 New color: hue ${newHue}°, sat ${sat.toFixed(0)}%, light ${light.toFixed(0)}%`);
+      }
+      
+      // 7) Set interval: change color every 2000 milliseconds (2 seconds)
+      let colorInterval = setInterval(applyNextColor, 2000);
+      
+      // 8) Apply first color immediately on page load
+      applyNextColor();
+      
+      // 9) Optional interactive click burst (flash of intensified glow)
+      function flashIntensity() {
+        if (!currentHue) return;
+        const originalShadow = glowElement.style.textShadow;
+        const originalColor = glowElement.style.color;
+        // temporary extreme glow
+        glowElement.style.textShadow = `0 0 20px hsl(${currentHue}, 100%, 70%), 0 0 40px hsl(${currentHue}, 100%, 65%), 0 0 70px #fff`;
+        glowElement.style.color = `hsl(${currentHue}, 100%, 75%)`;
+        setTimeout(() => {
+          // restore to current proper color (will be reapplied by next interval if needed, but we revert to the stored values)
+          glowElement.style.color = `hsl(${currentHue}, ${currentSat}%, ${currentLight}%)`;
+          glowElement.style.textShadow = buildGlowShadows(currentHue, currentSat, currentLight);
+        }, 180);
+      }
+      
+      glowElement.addEventListener('click', (e) => {
+        e.stopPropagation();
+        flashIntensity();
+      });
+      
+      // 10) Background verification – ensure absolute black
+      const enforceBlack = () => {
+        const bodyStyle = window.getComputedStyle(document.body);
+        if (bodyStyle.backgroundColor !== 'rgb(0, 0, 0)') {
+          document.body.style.backgroundColor = '#000000';
+          document.documentElement.style.backgroundColor = '#000000';
+        }
+      };
+      enforceBlack();
+      setInterval(enforceBlack, 5000); // extra safety
+      
+      // 11) Console greeting and info
+      console.log(
+        "%c✨ MuazBinShafi – Dynamic Color Shift ✨\n%c✓ Changes to a NEW, DISTINCT color every 2 seconds\n✓ Uses all 360 unique hues + random saturation/lightness\n✓ No exact color repeats for at least 720 seconds (12 min) — reshuffle after full cycle\n✓ Background: world’s most black (#000000)\n✓ Breathing animation + click flash",
+        "color: #0ff; font-size: 14px; font-weight: bold;",
+        "color: #f0f; font-size: 12px;"
+      );
+      
+      // 12) Small title animation to hint at the dynamic nature (non-intrusive)
+      const originalTitle = document.title;
+      let titleTimer = null;
+      const animateTitle = () => {
+        document.title = "🌈 MuazBinShafi • Every 2s new color 🌈";
+        setTimeout(() => {
+          document.title = originalTitle;
+        }, 1800);
+      };
+      window.addEventListener('load', () => {
+        animateTitle();
+      });
+      
+      // Optional: user can stop/reset? Not needed, but we provide a clean experience.
+      // If the user wants to see the color queue info, we log the remaining unique hues count
+      // every minute – for debugging / transparency.
+      setInterval(() => {
+        const remaining = hueQueue.length;
+        if (remaining === 0) {
+          console.log("🔄 Color palette reshuffled – fresh set of 360 hues started!");
+        } else if (remaining % 60 === 0) {
+          console.log(`🎨 Unique colors left in current cycle: ${remaining} (full cycle repeats after 360 steps = 12 minutes)`);
+        }
+      }, 60000);
+    })();
+  </script>
+</body>
+</html>
